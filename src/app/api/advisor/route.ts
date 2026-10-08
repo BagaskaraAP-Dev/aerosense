@@ -1,4 +1,4 @@
-import { askJson, claudeEnabled, errorMessage } from "@/lib/claude";
+import { aiName, askJson, errorMessage } from "@/lib/ai";
 
 const SYSTEM = `Kamu adalah AeroSense, asisten cuaca & kualitas udara untuk warga Indonesia (terutama Palembang yang sering dilanda kabut asap karhutla).
 Kamu menerima data realtime dalam JSON. Tulis saran berbahasa Indonesia sehari-hari, seperti teman yang paham kesehatan dan langsung ke pokok.
@@ -19,12 +19,23 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
+type Advice = { headline: string; summary: string; checklist: string[] };
+
+/** Gemini tidak memaksa skema seketat Claude, jadi bentuk dan panjang jawaban dicek di sini. */
+function clean(r: Partial<Advice>): Advice | null {
+  if (typeof r.headline !== "string" || typeof r.summary !== "string" || !Array.isArray(r.checklist)) return null;
+  const checklist = r.checklist.filter((x): x is string => typeof x === "string" && x.trim() !== "").map((x) => x.trim().slice(0, 80)).slice(0, 4);
+  if (!r.headline.trim() || checklist.length === 0) return null;
+  return { headline: r.headline.trim().slice(0, 120), summary: r.summary.trim().slice(0, 500), checklist };
+}
+
 export async function GET() {
-  return Response.json({ enabled: claudeEnabled() });
+  const provider = aiName();
+  return Response.json({ enabled: provider != null, provider });
 }
 
 export async function POST(request: Request) {
-  if (!claudeEnabled()) return Response.json({ error: "Claude belum dikonfigurasi." }, { status: 503 });
+  if (!aiName()) return Response.json({ error: "AI belum dikonfigurasi." }, { status: 503 });
 
   let input: unknown;
   try {
@@ -36,12 +47,10 @@ export async function POST(request: Request) {
   if (payload.length > 8000) return Response.json({ error: "Data terlalu besar." }, { status: 413 });
 
   try {
-    const advice = await askJson<{ headline: string; summary: string; checklist: string[] }>({
-      system: SYSTEM,
-      schema: SCHEMA,
-      content: [{ type: "text", text: `Data cuaca saat ini:\n${payload}` }],
-    });
-    return Response.json({ ...advice, source: "claude" });
+    const raw = await askJson<Partial<Advice>>({ system: SYSTEM, schema: SCHEMA, text: `Data cuaca saat ini:\n${payload}` });
+    const advice = clean(raw);
+    if (!advice) return Response.json({ error: "Jawaban AI tidak lengkap." }, { status: 502 });
+    return Response.json({ ...advice, source: "ai" });
   } catch (err) {
     const { message, status } = errorMessage(err);
     return Response.json({ error: message }, { status });

@@ -124,7 +124,9 @@ export default function AeroSenseApp() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [lastScan, setLastScan] = useState<{ outcome: ScanOutcome; at: number } | null>(null);
-  const [claudeEnabled, setClaudeEnabled] = useState(false);
+  // Nama penyedia AI dari server ("Gemini" / "Claude"); null berarti tanpa AI, saran memakai aturan lokal.
+  const [aiName, setAiName] = useState<string | null>(null);
+  const claudeEnabled = aiName != null;
   const [stationEnabled, setStationEnabled] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -150,7 +152,7 @@ export default function AeroSenseApp() {
     if (!initial.place || initial.place.source === "gps") requestPosition().then(choosePlace, () => {});
     fetch("/api/advisor")
       .then((r) => r.json())
-      .then((j) => setClaudeEnabled(!!j.enabled))
+      .then((j) => setAiName(j.enabled ? (j.provider ?? "AI") : null))
       .catch(() => {});
   }, [initial, choosePlace]);
 
@@ -212,8 +214,8 @@ export default function AeroSenseApp() {
   const sky = snap ? skyOf(snap) : null;
 
   /* ---------- saran AI ---------- */
-  // Saran lokal selalu tersedia seketika; versi Claude menggantikannya bila sudah datang.
-  // Hasil Claude disimpan per "kunci kondisi" supaya refresh 10 menit tidak memanggil ulang.
+  // Saran lokal selalu tersedia seketika; versi AI menggantikannya bila sudah datang.
+  // Hasil AI disimpan per "kunci kondisi" supaya refresh 10 menit tidak memanggil ulang.
 
   const adviceKey = snap
     ? `${place.lat},${place.lon}|${snap.current.time.slice(0, 13)}|${snap.air?.aqi}|${snap.current.code}|${!!snap.simulated}|${sensitive}`
@@ -235,7 +237,7 @@ export default function AeroSenseApp() {
       .then(async (r) => {
         const j = await r.json();
         if (!r.ok) throw new Error(j.error);
-        const a: Advice = { headline: j.headline, summary: j.summary, checklist: j.checklist, source: "claude" };
+        const a: Advice = { headline: j.headline, summary: j.summary, checklist: j.checklist, source: "ai" };
         if (!stale) setClaudeAdvice((m) => ({ ...m, [adviceKey]: a }));
       })
       .catch(() => {
@@ -391,7 +393,7 @@ export default function AeroSenseApp() {
             <AirCard snap={snap} />
 
             {/* Saran AI */}
-            {advice && <AdviceCard key={advice.headline} advice={advice} loading={adviceLoading} />}
+            {advice && <AdviceCard key={advice.headline} advice={advice} loading={adviceLoading} aiName={aiName} />}
 
             {/* Prakiraan per jam */}
             <section className="animate-rise rounded-3xl border border-line bg-ink-2/90 p-5 sm:p-6 lg:col-span-12">
@@ -428,7 +430,7 @@ export default function AeroSenseApp() {
               ? "stasiun pemantau darat terdekat (jaringan WAQI, mis. BMKG) untuk angka sekarang; prakiraan dari model CAMS/Copernicus yang dikoreksi dengan hasil ukur stasiun."
               : "model CAMS/Copernicus (resolusi ± 40 km, bukan stasiun darat), dihitung ulang menjadi AQI dengan metode NowCast EPA."}{" "}
             Deteksi wajah: MediaPipe BlazeFace, berjalan di perangkatmu.{" "}
-            {claudeEnabled ? "Saran teks oleh Claude (Anthropic)." : "Saran teks oleh aturan lokal."}
+            {aiName ? `Saran teks oleh ${aiName}.` : "Saran teks oleh aturan lokal."}
           </p>
         </footer>
       </div>
@@ -439,7 +441,7 @@ export default function AeroSenseApp() {
         onClose={() => setScannerOpen(false)}
         onResult={onScanResult}
         aqi={snap?.air?.aqi ?? null}
-        claudeEnabled={claudeEnabled}
+        aiName={aiName}
       />
     </div>
   );
@@ -725,7 +727,7 @@ function Pollutant({ name, value, note, warn }: { name: string; value: number; n
   );
 }
 
-function AdviceCard({ advice, loading }: { advice: Advice; loading: boolean }) {
+function AdviceCard({ advice, loading, aiName }: { advice: Advice; loading: boolean; aiName: string | null }) {
   const [done, setDone] = useState<Set<number>>(new Set());
 
   return (
@@ -735,10 +737,10 @@ function AdviceCard({ advice, loading }: { advice: Advice; loading: boolean }) {
         <span className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted">
           {loading ? (
             <>
-              <Loader2 className="h-3 w-3 animate-spin" /> Claude menulis…
+              <Loader2 className="h-3 w-3 animate-spin" /> {aiName} menulis…
             </>
-          ) : advice.source === "claude" ? (
-            "ditulis Claude"
+          ) : advice.source === "ai" ? (
+            `ditulis ${aiName}`
           ) : (
             "aturan lokal"
           )}

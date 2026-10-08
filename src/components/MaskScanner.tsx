@@ -11,7 +11,8 @@ type Props = {
   onClose: () => void;
   onResult: (r: ScanOutcome) => void;
   aqi: number | null;
-  claudeEnabled: boolean;
+  /** Nama penyedia AI ('Gemini' / 'Claude'); null berarti opsi pendapat kedua disembunyikan. */
+  aiName: string | null;
 };
 
 type Phase = "loading" | "scanning" | "result" | "error";
@@ -53,7 +54,7 @@ function ScanSession({
   onRetry,
   onResult,
   aqi,
-  claudeEnabled,
+  aiName,
 }: Omit<Props, "open"> & { onRetry: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -196,7 +197,7 @@ function ScanSession({
             </button>
           </div>
         ) : phase === "result" && outcome ? (
-          <Result outcome={outcome} aqi={aqi} snapshot={snapshot} claudeEnabled={claudeEnabled} claude={claude} onAskClaude={askClaude} onRetry={onRetry} onDone={onClose} />
+          <Result outcome={outcome} aqi={aqi} snapshot={snapshot} aiName={aiName} claude={claude} onAskClaude={askClaude} onRetry={onRetry} onDone={onClose} />
         ) : (
           <>
             <div
@@ -242,7 +243,7 @@ function Result({
   outcome,
   aqi,
   snapshot,
-  claudeEnabled,
+  aiName,
   claude,
   onAskClaude,
   onRetry,
@@ -251,7 +252,7 @@ function Result({
   outcome: ScanOutcome;
   aqi: number | null;
   snapshot: string | null;
-  claudeEnabled: boolean;
+  aiName: string | null;
   claude: { loading: boolean; status?: string; jenis?: string; catatan?: string; error?: string } | null;
   onAskClaude: () => void;
   onRetry: () => void;
@@ -301,21 +302,21 @@ function Result({
         <p className="mt-3 leading-relaxed text-paper/85">{copy.body}</p>
       </div>
 
-      {claudeEnabled && (
+      {aiName && (
         <div className="rounded-2xl border border-line bg-ink-2 p-4">
           {!claude ? (
             <button onClick={onAskClaude} className="flex w-full items-center justify-center gap-2 rounded-xl border border-line-strong py-3 font-semibold hover:bg-ink-3">
-              <Sparkles className="h-4 w-4 text-gold" /> Minta pendapat kedua dari Claude
+              <Sparkles className="h-4 w-4 text-gold" /> Minta pendapat kedua dari {aiName}
             </button>
           ) : claude.loading ? (
             <p className="flex items-center gap-2 text-muted">
-              <Loader2 className="h-4 w-4 animate-spin" /> Claude sedang melihat fotonya…
+              <Loader2 className="h-4 w-4 animate-spin" /> {aiName} sedang melihat fotonya…
             </p>
           ) : claude.error ? (
             <p className="text-warn">{claude.error}</p>
           ) : (
             <div className="space-y-1">
-              <p className="label">Pendapat kedua · Claude</p>
+              <p className="label">Pendapat kedua · {aiName}</p>
               <p className="font-semibold">
                 {claudeLabel[claude.status ?? ""] ?? claude.status}
                 {claude.jenis && claude.jenis !== "-" ? ` · ${claude.jenis}` : ""}
@@ -323,7 +324,7 @@ function Result({
               <p className="text-paper/80">{claude.catatan}</p>
             </div>
           )}
-          <p className="mt-2 text-[11px] text-faint">Opsi ini mengirim foto ke Claude (Anthropic) untuk diperiksa.</p>
+          <p className="mt-2 text-[11px] text-faint">Opsi ini mengirim foto ke {aiName === "Gemini" ? "Gemini (Google)" : "Claude (Anthropic)"} untuk diperiksa.</p>
         </div>
       )}
 

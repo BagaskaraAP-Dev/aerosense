@@ -4,10 +4,10 @@ export type Advice = {
   headline: string;
   summary: string;
   checklist: string[];
-  source: "claude" | "lokal";
+  source: "ai" | "lokal";
 };
 
-/** Ringkasan data yang dikirim ke Claude — kecil, tanpa data pribadi. */
+/** Ringkasan data yang dikirim ke penyedia AI (Gemini/Claude) — kecil, tanpa data pribadi. */
 export function adviceInput(s: Snapshot, placeName: string, profile: Profile) {
   const a = assess(s, profile);
   const { best, worst } = outingWindows(s, profile);
@@ -55,7 +55,7 @@ export function adviceInput(s: Snapshot, placeName: string, profile: Profile) {
   };
 }
 
-/** Mesin aturan lokal: dipakai kalau Claude tidak tersedia. */
+/** Mesin aturan lokal: dipakai kalau AI tidak tersedia. */
 export function localAdvice(s: Snapshot, placeName: string, profile: Profile): Advice {
   const a = assess(s, profile);
   const c = s.current;

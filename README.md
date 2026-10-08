@@ -26,11 +26,10 @@ Ada tiga hal yang dilakukan AeroSense:
 |---|---|---|
 | Deteksi wajah | **MediaPipe BlazeFace** (neural network, Google) | Browser/HP, offline |
 | Deteksi masker | Warna kulit di sekitar mata dipelajari, lalu dibandingkan dengan area hidung & mulut (ruang warna YCbCr) | Browser/HP |
-| Saran teks | **Claude** (Anthropic), dengan cadangan mesin aturan lokal | Server Next.js |
-| Pendapat kedua foto masker | **Claude** (vision) | Server, hanya kalau pengguna menekan tombolnya |
+| Saran teks | **Gemini** (Google) atau **Claude** (Anthropic), dengan cadangan mesin aturan lokal | Server Next.js |
+| Pendapat kedua foto masker | **Gemini** atau **Claude** (vision) | Server, hanya kalau pengguna menekan tombolnya |
 
-Foto dari kamera **tidak dikirim ke mana pun**, kecuali pengguna sendiri menekan "Minta pendapat kedua
-dari Claude".
+Foto dari kamera **tidak dikirim ke mana pun**, kecuali pengguna sendiri menekan "Minta pendapat kedua".
 
 Keterbatasan detektor masker: masker berwarna krem atau sewarna kulit, serta janggut lebat, bisa salah
 terbaca. Cahaya yang terlalu gelap akan memunculkan pesan "Cahaya kurang".
@@ -90,10 +89,17 @@ AeroSense bisa dipasang seperti aplikasi: buka di Chrome HP, lalu pilih menu ⋮
 Kartu kualitas udara akan menampilkan "Terukur di <nama stasiun> · <jarak> km · BMKG". Kalau token belum
 diisi atau tidak ada stasiun aktif di dekat lokasi, kartu menulis bahwa angkanya perkiraan model.
 
-### Mengaktifkan Claude (opsional)
+### Mengaktifkan AI untuk saran teks (opsional)
 
-Salin `.env.example` menjadi `.env.local`, lalu isi `ANTHROPIC_API_KEY`. Tanpa key ini, semua fitur
-lain tetap berjalan, dan saran teks memakai mesin aturan lokal.
+Pilih salah satu penyedia. Tanpa keduanya, semua fitur tetap berjalan dan saran teks memakai mesin aturan lokal.
+
+- **Gemini** (ada paket gratis): ambil key di https://aistudio.google.com/apikey, isi `GEMINI_API_KEY`.
+  Model bawaan `gemini-3.5-flash-lite`; ganti lewat `GEMINI_MODEL` bila perlu.
+- **Claude** (berbayar): isi `ANTHROPIC_API_KEY`.
+
+Salin `.env.example` menjadi `.env.local`, isi key-nya, lalu jalankan ulang `npm run dev`. Di Vercel, tambahkan
+lewat `npx vercel env add GEMINI_API_KEY production` lalu deploy ulang. Kalau dua key terisi, Gemini yang dipakai
+(atur dengan `AI_PROVIDER=claude`).
 
 ## Mode demo
 
@@ -105,8 +111,9 @@ sebuah banner menandai bahwa angkanya bukan data asli.
 
 ```
 src/app/page.tsx              halaman utama
-src/app/api/advisor           saran teks dari Claude
-src/app/api/mask-check        pendapat kedua Claude untuk foto masker
+src/app/api/advisor           saran teks dari Gemini/Claude
+src/app/api/mask-check        pendapat kedua AI untuk foto masker
+src/lib/ai.ts                pilih penyedia AI (gemini.ts / claude.ts)
 src/app/api/station           AQI terukur dari stasiun darat terdekat (WAQI)
 src/lib/station.ts            cari stasiun aktif terdekat (server, memakai WAQI_TOKEN)
 src/components/AeroSenseApp.tsx   UI utama

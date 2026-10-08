@@ -1,4 +1,4 @@
-import { askJson, claudeEnabled, errorMessage } from "@/lib/claude";
+import { aiName, askJson, errorMessage } from "@/lib/ai";
 
 const SYSTEM = `Kamu memeriksa foto selfie untuk aplikasi AeroSense: apakah orang di foto memakai masker dengan benar sebelum keluar saat udara berasap.
 Nilai hanya pemakaian masker, jangan mengomentari wajah, identitas, atau penampilan.
@@ -17,10 +17,12 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
+const STATUS = ["benar", "salah", "tanpa_masker", "tidak_jelas"];
+
 const MAX_BYTES = 2_000_000;
 
 export async function POST(request: Request) {
-  if (!claudeEnabled()) return Response.json({ error: "Claude belum dikonfigurasi." }, { status: 503 });
+  if (!aiName()) return Response.json({ error: "AI belum dikonfigurasi." }, { status: 503 });
 
   let image: unknown;
   try {
@@ -36,12 +38,13 @@ export async function POST(request: Request) {
     const verdict = await askJson<{ status: string; jenis: string; catatan: string }>({
       system: SYSTEM,
       schema: SCHEMA,
-      content: [
-        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: match[1] } },
-        { type: "text", text: "Periksa pemakaian masker di foto ini." },
-      ],
+      text: "Periksa pemakaian masker di foto ini.",
+      imageJpeg: match[1],
     });
-    return Response.json(verdict);
+    if (!STATUS.includes(verdict.status) || typeof verdict.catatan !== "string") {
+      return Response.json({ error: "Jawaban AI tidak lengkap." }, { status: 502 });
+    }
+    return Response.json({ status: verdict.status, jenis: String(verdict.jenis ?? "-").slice(0, 40), catatan: verdict.catatan.slice(0, 300) });
   } catch (err) {
     const { message, status } = errorMessage(err);
     return Response.json({ error: message }, { status });
