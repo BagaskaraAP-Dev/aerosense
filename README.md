@@ -2,6 +2,10 @@
 
 > Dibuat oleh **Bagaskara Amukti Palapa**, mahasiswa **Universitas Bina Darma**, Palembang.
 
+**Coba langsung:** https://aerosense-pied.vercel.app (buka di Chrome HP, lalu ⋮ → Tambahkan ke layar utama)
+
+Berjalan di Chrome/Edge 99+, Safari/iOS 15.4+, Firefox 97+, dan Samsung Internet 18+, baik di HP maupun laptop.
+
 **AeroSense** adalah aplikasi cuaca berbasis AI untuk Palembang (dan kota lain). Namanya berarti
 "merasakan udara": *aero* (udara) + *sense* (indra). Logonya adalah perahu Sungai Musi yang memancarkan
 gelombang radar.
