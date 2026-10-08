@@ -263,8 +263,6 @@ export default function AeroSenseApp() {
   const clock = new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: tz }).format(now);
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(now));
   const greeting = hour < 4 ? "Selamat malam" : hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
-  const ageMin = real ? Math.floor((now - real.fetchedAt) / 60000) : 0;
-  const ageLabel = ageMin < 1 ? "barusan" : ageMin < 60 ? `${ageMin} mnt lalu` : `${Math.floor(ageMin / 60)} jam lalu`;
   // Lewat 2× jadwal refresh berarti pengambilan data terakhir gagal (mis. sedang offline).
   const live = !!real && now - real.fetchedAt < REFRESH_MS * 2;
   const hazeIntensity = snap?.air ? Math.min(1, Math.max(0, (snap.air.aqi - 100) / 200)) : 0;
@@ -294,16 +292,9 @@ export default function AeroSenseApp() {
 
         {/* Sambutan */}
         <section className="mt-6 animate-rise sm:mt-10">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              {live && <span className="absolute inline-flex h-full w-full animate-ping-slow rounded-full bg-ok" />}
-              <span className={`relative inline-flex h-2 w-2 rounded-full ${live ? "bg-ok" : "bg-warn"}`} />
-            </span>
-            <p className="label">
-              {live ? "Live" : "Data tersimpan"} · {day} · {clock} {tzLabel(tz)}
-              {real && ` · diperbarui ${ageLabel}`}
-            </p>
-          </div>
+          <p className="label">
+            {live ? "Live" : "Data tersimpan"} · {day} · {clock} {tzLabel(tz)}
+          </p>
           <h1 className="mt-3 text-[2.6rem] font-extrabold leading-[0.95] tracking-tight sm:text-6xl">
             {greeting},<br />
             <span className="text-gold">{place.name}</span>
