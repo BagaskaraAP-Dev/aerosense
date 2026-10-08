@@ -1,5 +1,8 @@
 import { aiName, askJson, errorMessage } from "@/lib/ai";
 
+// Dua percobaan model Gemini (utama + cadangan) harus muat di batas waktu fungsi Vercel.
+export const maxDuration = 30;
+
 const SYSTEM = `Kamu adalah AeroSense, asisten cuaca & kualitas udara untuk warga Indonesia (terutama Palembang yang sering dilanda kabut asap karhutla).
 Kamu menerima data realtime dalam JSON. Tulis saran berbahasa Indonesia sehari-hari, seperti teman yang paham kesehatan dan langsung ke pokok.
 - headline: maks 8 kata, langsung menjawab "aman keluar atau tidak".

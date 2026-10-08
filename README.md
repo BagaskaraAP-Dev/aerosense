@@ -94,7 +94,7 @@ diisi atau tidak ada stasiun aktif di dekat lokasi, kartu menulis bahwa angkanya
 Pilih salah satu penyedia. Tanpa keduanya, semua fitur tetap berjalan dan saran teks memakai mesin aturan lokal.
 
 - **Gemini** (ada paket gratis): ambil key di https://aistudio.google.com/apikey, isi `GEMINI_API_KEY`.
-  Model bawaan `gemini-3.5-flash-lite`; ganti lewat `GEMINI_MODEL` bila perlu.
+  Model bawaan `gemini-3.8-flash`, otomatis pindah ke `gemini-3.5-flash-lite` saat Google sedang sibuk; ganti lewat `GEMINI_MODEL` bila perlu.
 - **Claude** (berbayar): isi `ANTHROPIC_API_KEY`.
 
 Salin `.env.example` menjadi `.env.local`, isi key-nya, lalu jalankan ulang `npm run dev`. Di Vercel, tambahkan

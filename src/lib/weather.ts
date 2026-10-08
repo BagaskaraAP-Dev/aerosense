@@ -17,6 +17,12 @@ export const PALEMBANG: Place = {
   source: "default",
 };
 
+/** Wilayah Kota Palembang yang koordinatnya sudah dicek ke layanan geocoding; muncul di pilihan lokasi. */
+export const PALEMBANG_AREAS: Place[] = [
+  { name: "Kertapati", region: "Kota Palembang", lat: -3.02165, lon: 104.75033, source: "search" },
+  { name: "Plaju", region: "Kota Palembang", lat: -2.9893, lon: 104.8019, source: "search" },
+];
+
 export type SkyKind = "clear" | "partly" | "cloudy" | "fog" | "drizzle" | "rain" | "storm" | "snow" | "haze";
 
 export type Current = {
@@ -391,17 +397,25 @@ export async function reverseGeocode(lat: number, lon: number): Promise<{ name: 
 
 export async function searchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
   const res = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=id`,
+    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=12&language=id`,
     { signal },
   );
-  const j = await ok(res);
-  return (j.results ?? []).map((r: { name: string; admin1?: string; country?: string; latitude: number; longitude: number }) => ({
-    name: r.name.replace(/^Kota /, ""),
-    region: [r.admin1, r.country].filter(Boolean).join(", "),
-    lat: r.latitude,
-    lon: r.longitude,
-    source: "search" as const,
-  }));
+  type Hit = { name: string; admin1?: string; admin2?: string; country?: string; country_code?: string; latitude: number; longitude: number };
+  const hits: Hit[] = (await ok(res)).results ?? [];
+  // Palembang dulu, lalu Sumatera Selatan, lalu Indonesia, baru dunia. Urutan asli dipertahankan dalam tiap kelompok.
+  const tier = (h: Hit) =>
+    /palembang/i.test(`${h.name} ${h.admin2 ?? ""}`) ? 0 : /sumatera selatan|south sumatra/i.test(h.admin1 ?? "") ? 1 : h.country_code === "ID" ? 2 : 3;
+  return hits
+    .map((h, i) => ({ h, i }))
+    .sort((a, b) => tier(a.h) - tier(b.h) || a.i - b.i)
+    .slice(0, 6)
+    .map(({ h: r }) => ({
+      name: r.name.replace(/^Kota /, ""),
+      region: [r.admin2 && r.admin2 !== r.name ? r.admin2 : null, r.admin1, r.country].filter(Boolean).join(", "),
+      lat: r.latitude,
+      lon: r.longitude,
+      source: "search" as const,
+    }));
 }
 
 /* ---------- Kode cuaca WMO ---------- */

@@ -1,5 +1,8 @@
 import { aiName, askJson, errorMessage } from "@/lib/ai";
 
+// Dua percobaan model Gemini (utama + cadangan) harus muat di batas waktu fungsi Vercel.
+export const maxDuration = 30;
+
 const SYSTEM = `Kamu memeriksa foto selfie untuk aplikasi AeroSense: apakah orang di foto memakai masker dengan benar sebelum keluar saat udara berasap.
 Nilai hanya pemakaian masker, jangan mengomentari wajah, identitas, atau penampilan.
 - status: "benar" bila masker menutup hidung DAN mulut; "salah" bila ada masker tapi hidung/mulut terbuka; "tanpa_masker" bila tidak ada masker; "tidak_jelas" bila wajah tidak terlihat cukup jelas.

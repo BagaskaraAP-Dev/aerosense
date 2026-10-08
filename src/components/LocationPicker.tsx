@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, LocateFixed, MapPin, Search, X } from "lucide-react";
-import { PALEMBANG, searchPlaces, type Place } from "@/lib/weather";
+import { PALEMBANG, PALEMBANG_AREAS, searchPlaces, type Place } from "@/lib/weather";
 
 const RECENT_KEY = "aerosense:recent";
 const RECENT_MAX = 5;
@@ -43,7 +43,10 @@ export default function LocationPicker({ open, onClose, onPick, onUseGps, locati
   const query = q.trim();
   const searching = query.length >= 2;
   const notFound = searching && !busy && found.q === query && found.places.length === 0;
-  const shown = searching ? found.places : [...recent, ...(recent.some((r) => samePlace(r, PALEMBANG)) ? [] : [PALEMBANG])];
+  // Palembang selalu paling atas, lalu kota yang terakhir dipilih, lalu wilayah Palembang lainnya.
+  const shown = searching
+    ? found.places
+    : [PALEMBANG, ...recent.filter((r) => !samePlace(r, PALEMBANG)), ...PALEMBANG_AREAS].filter((p, i, all) => all.findIndex((q) => samePlace(q, p)) === i);
 
   const pick = (p: Place) => {
     const next = [p, ...recent.filter((r) => !samePlace(r, p))].slice(0, RECENT_MAX);
@@ -108,7 +111,7 @@ export default function LocationPicker({ open, onClose, onPick, onUseGps, locati
             {locating ? <Loader2 className="h-4 w-4 animate-spin text-gold" /> : <LocateFixed className="h-4 w-4 text-gold" />}
             <span className="font-semibold">Pakai lokasi saya sekarang</span>
           </button>
-          {!searching && recent.length > 0 && <p className="label px-3 pt-3">Terakhir dipilih</p>}
+          {!searching && <p className="label px-3 pt-3">Palembang &amp; terakhir dipilih</p>}
           {notFound && <p className="px-3 py-3 text-sm text-muted">Kota &ldquo;{query}&rdquo; tidak ditemukan.</p>}
           {shown.map((p) => (
             <button
