@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AeroSense — baca udara sebelum melangkah
 
-## Getting Started
+> Dibuat oleh **Bagaskara Amukti Palapa**, mahasiswa **Universitas Bina Darma**, Palembang.
 
-First, run the development server:
+**AeroSense** adalah aplikasi cuaca berbasis AI untuk Palembang (dan kota lain). Namanya berarti
+"merasakan udara": *aero* (udara) + *sense* (indra). Logonya adalah perahu Sungai Musi yang memancarkan
+gelombang radar.
+
+Ada tiga hal yang dilakukan AeroSense:
+
+1. **Data realtime.** Suhu, hujan, angin, UV, dan kualitas udara (AQI, PM2.5, PM10) diambil langsung
+   untuk lokasi GPS kamu. Data diperbarui otomatis tiap 10 menit dan setiap kali aplikasi dibuka lagi.
+2. **Keputusan "boleh keluar?"** Data itu diolah menjadi status **Aman / Waspada / Bahaya**, indeks
+   layak keluar 0–100, serta jam terbaik dan jam yang sebaiknya dihindari dalam 24 jam ke depan.
+   Ada juga prakiraan 7 hari lengkap dengan AQI maksimum harian.
+3. **Gerbang masker (AI kamera).** Kalau udara buruk (AQI > 100), AeroSense meminta kamu memindai wajah.
+   AI di perangkat memeriksa apakah masker sudah menutup **hidung dan mulut** sebelum kamu keluar.
+
+## Cara kerja AI-nya
+
+| Bagian | Teknologi | Jalan di mana |
+|---|---|---|
+| Deteksi wajah | **MediaPipe BlazeFace** (neural network, Google) | Browser/HP, offline |
+| Deteksi masker | Warna kulit di sekitar mata dipelajari, lalu dibandingkan dengan area hidung & mulut (ruang warna YCbCr) | Browser/HP |
+| Saran teks | **Claude** (Anthropic), dengan cadangan mesin aturan lokal | Server Next.js |
+| Pendapat kedua foto masker | **Claude** (vision) | Server, hanya kalau pengguna menekan tombolnya |
+
+Foto dari kamera **tidak dikirim ke mana pun**, kecuali pengguna sendiri menekan "Minta pendapat kedua
+dari Claude".
+
+Keterbatasan detektor masker: masker berwarna krem atau sewarna kulit, serta janggut lebat, bisa salah
+terbaca. Cahaya yang terlalu gelap akan memunculkan pesan "Cahaya kurang".
+
+## Sumber data
+
+- Cuaca: [Open-Meteo](https://open-meteo.com) (gratis, tanpa API key)
+- Kualitas udara sekarang: **stasiun pemantau darat** terdekat (≤ 30 km, pembacaan ≤ 3 jam) dari jaringan
+  [WAQI](https://aqicn.org). Di Palembang sumbernya antara lain **BMKG Talang Betutu** dan Musi 2. Butuh
+  `WAQI_TOKEN` (gratis, lihat di bawah).
+- Prakiraan kualitas udara: Open-Meteo Air Quality, berasal dari model **CAMS/Copernicus** (resolusi ± 40 km,
+  jangkauan ± 5 hari). Kalau ada stasiun, selisih stasiun − model dipakai untuk mengoreksi prakiraan 24 jam
+  ke depan. Tanpa stasiun, angka "sekarang" juga berasal dari model ini.
+
+Saat kabut asap, model CAMS bisa jauh di bawah kenyataan. Contoh 8 Okt 2026 pukul 17.00: stasiun BMKG
+Talang Betutu mencatat AQI 434, sedangkan model hanya membaca PM2.5 ± 200 µg/m³.
+
+### Cara AQI dihitung
+
+`us_aqi` bawaan Open-Meteo memakai rata-rata 24 jam (PM) dan 8 jam (ozon), sehingga tertinggal
+berjam-jam: asap yang sudah menipis masih terbaca "sangat tidak sehat", dan ozon siang hari masih
+terbawa sampai tengah malam. AeroSense menghitung ulang AQI dari konsentrasi per jam:
+
+- **NowCast EPA** untuk PM2.5 dan PM10, yaitu metode yang dipakai AirNow untuk angka "saat ini".
+- **Breakpoint PM2.5 revisi EPA 2024** (batas "Baik" turun dari 12 ke 9 µg/m³).
+- Ozon ditampilkan sebagai peringatan terpisah bila nilai per jamnya ≥ 245 µg/m³ (≈ 0,125 ppm).
+- Perbandingan dengan pedoman WHO memakai rata-rata 24 jam yang sebenarnya, bukan nilai sesaat.
+- Nama lokasi dari GPS: BigDataCloud reverse geocoding
+
+## Menjalankan
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # buka http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Mencoba di HP (kamera butuh HTTPS)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Browser hanya mengizinkan kamera di `https://` atau `localhost`. Untuk mencobanya di HP lewat Wi-Fi yang
+sama:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev:hp       # HTTPS dengan sertifikat self-signed
+```
 
-## Learn More
+Buka `https://<IP-laptop>:3000` di HP, lalu terima peringatan sertifikat. Cara paling mudah untuk
+presentasi adalah deploy ke Vercel, yang langsung memakai HTTPS.
 
-To learn more about Next.js, take a look at the following resources:
+AeroSense bisa dipasang seperti aplikasi: buka di Chrome HP, lalu pilih menu ⋮ → **Tambahkan ke layar utama**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Menghubungkan stasiun udara darat (disarankan)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Minta token gratis di https://aqicn.org/data-platform/token (isi email, token langsung dikirim).
+2. Salin `.env.example` menjadi `.env.local`, lalu isi `WAQI_TOKEN=`.
+3. Jalankan ulang `npm run dev`.
 
-## Deploy on Vercel
+Kartu kualitas udara akan menampilkan "Terukur di <nama stasiun> · <jarak> km · BMKG". Kalau token belum
+diisi atau tidak ada stasiun aktif di dekat lokasi, kartu menulis bahwa angkanya perkiraan model.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Mengaktifkan Claude (opsional)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Salin `.env.example` menjadi `.env.local`, lalu isi `ANTHROPIC_API_KEY`. Tanpa key ini, semua fitur
+lain tetap berjalan, dan saran teks memakai mesin aturan lokal.
+
+## Mode demo
+
+Kalau saat presentasi udaranya sedang bersih, nyalakan **Simulasi kabut asap** di bagian bawah halaman.
+AQI akan dipaksa ke 268 supaya alur "wajib masker → scan kamera" bisa didemokan. Selama mode ini aktif,
+sebuah banner menandai bahwa angkanya bukan data asli.
+
+## Struktur
+
+```
+src/app/page.tsx              halaman utama
+src/app/api/advisor           saran teks dari Claude
+src/app/api/mask-check        pendapat kedua Claude untuk foto masker
+src/app/api/station           AQI terukur dari stasiun darat terdekat (WAQI)
+src/lib/station.ts            cari stasiun aktif terdekat (server, memakai WAQI_TOKEN)
+src/components/AeroSenseApp.tsx   UI utama
+src/components/MaskScanner    kamera + overlay AI
+src/components/Atmosphere     latar animasi (asap, hujan, petir, bintang)
+src/lib/weather.ts            ambil data + penilaian risiko
+src/lib/mask-detector.ts      deteksi wajah & masker
+src/app/icon.svg              logo (npm run icons membuat versi PNG)
+```

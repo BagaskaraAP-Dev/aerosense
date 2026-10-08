@@ -4,11 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:hp": "next dev --hostname 0.0.0.0 --experimental-https",
+    "icons": "node scripts/make-icons.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "axios": "^1.20.0",
+    "lucide-react": "^1.50.0",
     "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8"
