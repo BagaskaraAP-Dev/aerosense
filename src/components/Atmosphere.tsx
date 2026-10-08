@@ -5,6 +5,9 @@ import type { SkyKind } from "@/lib/weather";
 
 type Props = { kind: SkyKind; isDay: boolean; /** 0..1 */ intensity: number };
 
+/** Gambar ± 30 fps, jadi gerakan per frame dua kali lipat dari versi 60 fps. */
+const STEP = 2;
+
 type Particle = { x: number; y: number; r: number; vx: number; vy: number; a: number; t: number };
 
 /** Latar belakang animasi yang mengikuti kondisi langit sebenarnya. */
@@ -15,13 +18,17 @@ export default function Atmosphere({ kind, isDay, intensity }: Props) {
     const canvas = ref.current!;
     const ctx = canvas.getContext("2d")!;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // HP kelas bawah: resolusi kanvas 1×, partikel separuh. Latar ini hanya hiasan.
+    const nav = navigator as Navigator & { deviceMemory?: number };
+    const lowEnd = (nav.hardwareConcurrency || 8) <= 4 || (nav.deviceMemory ?? 8) <= 4;
     let w = 0;
     let h = 0;
     let raf = 0;
     let flash = 0;
+    let last = 0;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = lowEnd ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
       w = window.innerWidth;
       h = window.innerHeight;
       canvas.width = w * dpr;
@@ -33,12 +40,15 @@ export default function Atmosphere({ kind, isDay, intensity }: Props) {
 
     const wet = kind === "rain" || kind === "drizzle" || kind === "storm";
     const small = w < 640;
-    const count =
-      kind === "haze" ? Math.round((small ? 70 : 140) * (0.4 + intensity))
-      : wet ? Math.round((small ? 90 : 180) * (kind === "drizzle" ? 0.5 : 1))
-      : kind === "clear" && !isDay ? (small ? 60 : 110)
-      : kind === "cloudy" || kind === "fog" || kind === "partly" ? (small ? 6 : 9)
-      : 0;
+    const scale = lowEnd ? 0.5 : 1;
+    const count = Math.round(
+      scale *
+        (kind === "haze" ? (small ? 70 : 140) * (0.4 + intensity)
+        : wet ? (small ? 90 : 180) * (kind === "drizzle" ? 0.5 : 1)
+        : kind === "clear" && !isDay ? (small ? 60 : 110)
+        : kind === "cloudy" || kind === "fog" || kind === "partly" ? (small ? 6 : 9)
+        : 0),
+    );
 
     const rnd = (a: number, b: number) => a + Math.random() * (b - a);
     const particles: Particle[] = Array.from({ length: count }, () => spawn(true));
@@ -49,6 +59,14 @@ export default function Atmosphere({ kind, isDay, intensity }: Props) {
       if (kind === "clear") return { x: rnd(0, w), y: rnd(0, h * 0.7), r: rnd(0.4, 1.3), vx: 0, vy: 0, a: rnd(0.2, 0.8), t: rnd(0, 6.28) };
       return { x: rnd(-200, w), y: rnd(-50, h * 0.6), r: rnd(140, 280), vx: rnd(0.04, 0.16), vy: 0, a: rnd(0.025, 0.06), t: 0 };
     }
+
+    // ± 30 fps sudah cukup halus untuk latar dan menghemat baterai separuhnya.
+    const tick = (t: number) => {
+      raf = requestAnimationFrame(tick);
+      if (t - last < 32) return;
+      last = t;
+      draw();
+    };
 
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
@@ -83,23 +101,23 @@ export default function Atmosphere({ kind, isDay, intensity }: Props) {
           ctx.moveTo(p.x, p.y);
           ctx.lineTo(p.x + p.vx * 2, p.y + p.r);
           ctx.stroke();
-          p.x += p.vx;
-          p.y += p.vy;
+          p.x += p.vx * STEP;
+          p.y += p.vy * STEP;
           if (p.y > h) Object.assign(p, spawn(false));
         } else if (kind === "haze") {
-          p.t += 0.01;
+          p.t += 0.01 * STEP;
           const a = p.a * (0.6 + 0.4 * Math.sin(p.t));
           ctx.fillStyle = `rgba(214, 170, 120, ${a})`;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           ctx.fill();
-          p.x += p.vx;
-          p.y += p.vy + Math.sin(p.t) * 0.1;
+          p.x += p.vx * STEP;
+          p.y += (p.vy + Math.sin(p.t) * 0.1) * STEP;
           if (p.x > w + 5) p.x = -5;
           if (p.y < -5) p.y = h + 5;
           if (p.y > h + 5) p.y = -5;
         } else if (kind === "clear") {
-          p.t += 0.02;
+          p.t += 0.02 * STEP;
           ctx.fillStyle = `rgba(236, 228, 211, ${p.a * (0.5 + 0.5 * Math.sin(p.t))})`;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -111,23 +129,23 @@ export default function Atmosphere({ kind, isDay, intensity }: Props) {
           g.addColorStop(1, `rgba(${tone}, 0)`);
           ctx.fillStyle = g;
           ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
-          p.x += p.vx;
+          p.x += p.vx * STEP;
           if (p.x - p.r > w) p.x = -p.r;
         }
       }
 
       if (kind === "storm") {
-        if (flash <= 0 && Math.random() < 0.004) flash = 1;
+        if (flash <= 0 && Math.random() < 0.004 * STEP) flash = 1;
         if (flash > 0) {
           ctx.fillStyle = `rgba(220, 230, 255, ${flash * 0.18})`;
           ctx.fillRect(0, 0, w, h);
-          flash -= 0.06;
+          flash -= 0.06 * STEP;
         }
       }
 
-      if (!reduced) raf = requestAnimationFrame(draw);
     };
     draw();
+    if (!reduced) raf = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(raf);

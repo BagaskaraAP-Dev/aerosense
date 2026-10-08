@@ -247,9 +247,11 @@ export default function AeroSenseApp() {
   }, [claudeEnabled, snap, adviceKey, claudeAdvice, place.name, profile]);
 
   // Udara buruk → kemungkinan besar kamera akan dipakai; panaskan model AI di latar.
+  // Model ± 12 MB, jadi tidak diunduh diam-diam di koneksi lambat atau mode hemat data.
   const maskRequired = !!verdict?.maskRequired;
   useEffect(() => {
-    if (!maskRequired) return;
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (!maskRequired || conn?.saveData || /2g|3g/.test(conn?.effectiveType ?? "")) return;
     const t = setTimeout(() => import("@/lib/mask-detector").then((m) => m.loadDetector()).catch(() => {}), 2500);
     return () => clearTimeout(t);
   }, [maskRequired]);
@@ -324,7 +326,7 @@ export default function AeroSenseApp() {
         ) : (
           <main className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-12">
             {/* Kondisi sekarang */}
-            <section className="animate-rise rounded-3xl border border-line bg-ink-2/80 p-5 backdrop-blur sm:p-7 lg:col-span-7">
+            <section className="animate-rise rounded-3xl border border-line bg-ink-2/90 p-5 sm:p-7 lg:col-span-7">
               <div className="flex items-start justify-between">
                 <p className="label">Sekarang · {place.region ?? place.name}</p>
                 <button
@@ -392,7 +394,7 @@ export default function AeroSenseApp() {
             {advice && <AdviceCard key={advice.headline} advice={advice} loading={adviceLoading} />}
 
             {/* Prakiraan per jam */}
-            <section className="animate-rise rounded-3xl border border-line bg-ink-2/80 p-5 backdrop-blur sm:p-6 lg:col-span-12">
+            <section className="animate-rise rounded-3xl border border-line bg-ink-2/90 p-5 sm:p-6 lg:col-span-12">
               <div className="flex items-baseline justify-between">
                 <p className="label">24 jam ke depan</p>
                 <p className="label hidden sm:block">suhu · peluang hujan · AQI</p>
@@ -482,7 +484,7 @@ function Verdict({
   const scanOk = lastScan?.outcome === "mask" && now - lastScan.at < 60 * 60 * 1000;
 
   return (
-    <section className={`animate-rise rounded-3xl border ${L.ring} bg-ink-2/80 p-5 backdrop-blur sm:p-7 lg:col-span-5`}>
+    <section className={`animate-rise rounded-3xl border ${L.ring} bg-ink-2/90 p-5 sm:p-7 lg:col-span-5`}>
       <div className="flex items-center justify-between gap-3">
         <p className="label">Boleh keluar rumah?</p>
         <button
@@ -639,7 +641,7 @@ function AirCard({ snap }: { snap: Snapshot }) {
   const segs = AQI_BANDS.map((b, i) => ({ color: b.color, w: ((b.max - (AQI_BANDS[i - 1]?.max ?? 0)) / 500) * 100 }));
 
   return (
-    <section className="animate-rise rounded-3xl border border-line bg-ink-2/80 p-5 backdrop-blur sm:p-7 lg:col-span-5">
+    <section className="animate-rise rounded-3xl border border-line bg-ink-2/90 p-5 sm:p-7 lg:col-span-5">
       <div className="flex items-baseline justify-between">
         <p className="label">Kualitas udara · AQI (US)</p>
         <p className="font-mono text-[11px] text-faint">{(st ? st.time : air.time).slice(11, 16)}</p>
@@ -727,7 +729,7 @@ function AdviceCard({ advice, loading }: { advice: Advice; loading: boolean }) {
   const [done, setDone] = useState<Set<number>>(new Set());
 
   return (
-    <section className="animate-rise rounded-3xl border border-line bg-ink-2/80 p-5 backdrop-blur sm:p-7 lg:col-span-7">
+    <section className="animate-rise rounded-3xl border border-line bg-ink-2/90 p-5 sm:p-7 lg:col-span-7">
       <div className="flex items-center justify-between">
         <p className="label">Saran untuk beberapa jam ke depan</p>
         <span className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted">
@@ -784,7 +786,7 @@ function WeekCard({ snap }: { snap: Snapshot }) {
   const weekday = new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" });
 
   return (
-    <section className="animate-rise rounded-3xl border border-line bg-ink-2/80 p-5 backdrop-blur sm:p-6 lg:col-span-12">
+    <section className="animate-rise rounded-3xl border border-line bg-ink-2/90 p-5 sm:p-6 lg:col-span-12">
       <div className="flex items-baseline justify-between">
         <p className="label">7 hari ke depan · ketuk untuk rincian</p>
         <p className="label hidden sm:block">hujan · suhu min–maks · AQI maks</p>

@@ -175,7 +175,7 @@ function ScanSession({
   const tone = live === "mask" ? "text-ok" : live === "no_mask" ? "text-danger" : live === "nose_open" ? "text-warn" : "text-paper";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-ink/95 backdrop-blur-sm" role="dialog" aria-modal aria-label="Pemeriksa masker">
+    <div className="fixed inset-0 z-50 flex flex-col bg-ink/95" role="dialog" aria-modal aria-label="Pemeriksa masker">
       <header className="flex items-center justify-between px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
         <div>
           <p className="label">Gerbang masker · AI di perangkat</p>
