@@ -1,4 +1,5 @@
 import { aiName, askJson, errorMessage } from "@/lib/ai";
+import { guard } from "@/lib/guard";
 
 // Dua percobaan model Gemini (utama + cadangan) harus muat di batas waktu fungsi Vercel.
 export const maxDuration = 30;
@@ -32,6 +33,14 @@ export async function GET() {
 export async function POST(request: Request) {
   if (!aiName()) return Response.json({ error: "AI belum dikonfigurasi." }, { status: 503 });
 
+  // Tiap panggilan memakai kuota AI berbayar: batasi per IP (per menit dan per hari).
+  const blocked = guard(request, "mask-check", 6, 60_000) ?? guard(request, "mask-check-day", 40, 86_400_000);
+  if (blocked) return blocked;
+  // Tolak body raksasa sebelum dibaca seluruhnya.
+  if (Number(request.headers.get("content-length")) > MAX_BYTES + 1_000) {
+    return Response.json({ error: "Gambar terlalu besar." }, { status: 413 });
+  }
+
   let image: unknown;
   try {
     ({ image } = await request.json());
@@ -39,7 +48,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Body bukan JSON." }, { status: 400 });
   }
   const match = typeof image === "string" ? /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(image) : null;
-  if (!match) return Response.json({ error: "Gambar harus JPEG base64." }, { status: 400 });
+  // "/9j/" adalah base64 dari penanda awal JPEG (FF D8 FF).
+  if (!match || !match[1].startsWith("/9j/")) return Response.json({ error: "Gambar harus JPEG base64." }, { status: 400 });
   if (match[1].length > MAX_BYTES) return Response.json({ error: "Gambar terlalu besar." }, { status: 413 });
 
   try {
@@ -54,6 +64,7 @@ export async function POST(request: Request) {
     }
     return Response.json({ status: verdict.status, jenis: String(verdict.jenis ?? "-").slice(0, 40), catatan: verdict.catatan.slice(0, 300) });
   } catch (err) {
+    console.error("mask-check:", err);
     const { message, status } = errorMessage(err);
     return Response.json({ error: message }, { status });
   }

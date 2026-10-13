@@ -327,8 +327,9 @@ export function simulateHaze(s: Snapshot): Snapshot {
 }
 
 export async function reverseGeocode(lat: number, lon: number): Promise<{ name: string; region?: string }> {
+  // api.bigdatacloud.net sekarang mengalihkan endpoint gratis ini ke api-bdc.io; panggil langsung.
   const res = await fetch(
-    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`,
+    `https://api-bdc.io/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=id`,
   );
   const j = await ok(res);
   return {

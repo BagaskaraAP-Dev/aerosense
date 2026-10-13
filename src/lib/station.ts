@@ -21,7 +21,8 @@ export async function nearestStation(lat: number, lon: number): Promise<Station 
   const token = process.env.WAQI_TOKEN!;
   const cands = await candidates(lat, lon, token).catch(() => []);
 
-  for (const c of cands) {
+  // Batasi jumlah feed yang dicoba supaya satu permintaan tidak memicu puluhan panggilan ke WAQI.
+  for (const c of cands.slice(0, 3)) {
     const detail = await feed(`@${c.uid}`, token).catch(() => null);
     // Stasiun jaringan lain (mis. sensor AirNet) kadang tidak punya feed — data peta tetap cukup.
     const station = detail ? toStation(detail, lat, lon) : null;
@@ -80,7 +81,8 @@ function toStation(f: Feed, lat: number, lon: number): Station | null {
     time,
     km: dist,
     dominant: f.dominentpol ?? null,
-    url: f.city.url ?? null,
+    // Dipakai sebagai href di UI: hanya terima tautan https (bukan javascript: dsb.).
+    url: f.city.url && /^https:\/\//i.test(f.city.url) ? f.city.url : null,
     attribution: owner ? shortOwner(owner.name) : "World Air Quality Index Project",
   };
 }

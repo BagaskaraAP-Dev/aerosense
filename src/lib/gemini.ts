@@ -83,7 +83,12 @@ async function call<T>(model: string, body: string): Promise<T> {
   }
 
   const j: GeminiResponse = await res.json().catch(() => ({}));
-  if (!res.ok) throw new GeminiError(j.error?.message ?? `HTTP ${res.status}`, res.status);
+  if (!res.ok) {
+    // Pesan mentah Google bisa memuat detail project/key: cukup dicatat di log server, jangan dikirim ke browser.
+    const raw = j.error?.message ?? "";
+    console.error(`Gemini ${model} HTTP ${res.status}: ${raw}`);
+    throw new GeminiError(/api key/i.test(raw) ? "API key Gemini tidak valid." : `Gemini error ${res.status}.`, res.status);
+  }
   if (j.promptFeedback?.blockReason) throw new GeminiError("Gemini menolak permintaan ini.", 422);
 
   const text = j.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim();

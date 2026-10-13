@@ -49,5 +49,7 @@ export function claudeErrorMessage(err: unknown): { message: string; status: num
   if (err instanceof Anthropic.RateLimitError) return { message: "Claude sedang sibuk, coba lagi sebentar.", status: 429 };
   if (err instanceof Anthropic.APIError) return { message: `Claude error ${err.status}.`, status: 502 };
   if (err instanceof Anthropic.APIConnectionError) return { message: "Tidak bisa terhubung ke Claude.", status: 502 };
-  return { message: err instanceof Error ? err.message : "Kesalahan tak dikenal.", status: 500 };
+  if (err instanceof SyntaxError) return { message: "Jawaban Claude bukan JSON yang valid.", status: 502 };
+  // Hanya pesan buatan kita sendiri (Error biasa) yang aman ditampilkan; sisanya cukup di log server.
+  return { message: err?.constructor === Error ? (err as Error).message : "Kesalahan tak dikenal.", status: 500 };
 }
