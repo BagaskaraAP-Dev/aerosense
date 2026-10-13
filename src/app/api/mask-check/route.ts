@@ -3,7 +3,7 @@ import { aiName, askJson, errorMessage } from "@/lib/ai";
 // Dua percobaan model Gemini (utama + cadangan) harus muat di batas waktu fungsi Vercel.
 export const maxDuration = 30;
 
-const SYSTEM = `Kamu memeriksa foto selfie untuk aplikasi AeroSense: apakah orang di foto memakai masker dengan benar sebelum keluar saat udara berasap.
+const SYSTEM = `Kamu memeriksa foto selfie untuk aplikasi AeroSense: apakah orang di foto memakai masker dengan benar saat udara berasap.
 Nilai hanya pemakaian masker, jangan mengomentari wajah, identitas, atau penampilan.
 - status: "benar" bila masker menutup hidung DAN mulut; "salah" bila ada masker tapi hidung/mulut terbuka; "tanpa_masker" bila tidak ada masker; "tidak_jelas" bila wajah tidak terlihat cukup jelas.
 - jenis: perkiraan jenis masker (mis. "N95/KN95", "masker medis", "kain", "scuba") atau "-" bila tidak ada.
@@ -23,6 +23,11 @@ const SCHEMA = {
 const STATUS = ["benar", "salah", "tanpa_masker", "tidak_jelas"];
 
 const MAX_BYTES = 2_000_000;
+
+/** Penyedia AI yang aktif ("Gemini" / "Claude"), atau null bila tombol pendapat kedua harus disembunyikan. */
+export async function GET() {
+  return Response.json({ provider: aiName() });
+}
 
 export async function POST(request: Request) {
   if (!aiName()) return Response.json({ error: "AI belum dikonfigurasi." }, { status: 503 });

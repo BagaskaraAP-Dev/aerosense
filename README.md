@@ -1,4 +1,4 @@
-# AeroSense — baca udara sebelum melangkah
+# AeroSense — pantau udara Palembang
 
 > Dibuat oleh **Bagaskara Amukti Palapa**, mahasiswa **Universitas Bina Darma**, Palembang.
 
@@ -6,19 +6,23 @@
 
 Berjalan di Chrome/Edge 99+, Safari/iOS 15.4+, Firefox 97+, dan Samsung Internet 18+, baik di HP maupun laptop.
 
-**AeroSense** adalah aplikasi cuaca berbasis AI untuk Palembang (dan kota lain). Namanya berarti
+**AeroSense** adalah aplikasi pemantau kualitas udara untuk Palembang (dan kota lain). Namanya berarti
 "merasakan udara": *aero* (udara) + *sense* (indra). Logonya adalah perahu Sungai Musi yang memancarkan
 gelombang radar.
 
-Ada tiga hal yang dilakukan AeroSense:
+Isi layarnya, dari atas ke bawah:
 
-1. **Data realtime.** Suhu, hujan, angin, UV, dan kualitas udara (AQI, PM2.5, PM10) diambil langsung
-   untuk lokasi GPS kamu. Data diperbarui otomatis tiap 10 menit dan setiap kali aplikasi dibuka lagi.
-2. **Keputusan "boleh keluar?"** Data itu diolah menjadi status **Aman / Waspada / Bahaya**, indeks
-   layak keluar 0–100, serta jam terbaik dan jam yang sebaiknya dihindari dalam 24 jam ke depan.
-   Ada juga prakiraan 7 hari lengkap dengan AQI maksimum harian.
-3. **Gerbang masker (AI kamera).** Kalau udara buruk (AQI > 100), AeroSense meminta kamu memindai wajah.
-   AI di perangkat memeriksa apakah masker sudah menutup **hidung dan mulut** sebelum kamu keluar.
+1. **AQI sekarang.** Angka, kategori, posisi di skala, arah perubahan 6 jam ke depan, dan sumbernya
+   (stasiun darat atau model satelit). Diperbarui otomatis tiap 10 menit dan setiap kali aplikasi dibuka lagi.
+2. **Yang perlu dilakukan.** Panduan tetap per kategori AQI: masker, jendela & pintu, dan kelompok sensitif.
+   Saat AQI > 100 muncul tombol **cek pemakaian masker**: AI di perangkat memeriksa apakah masker sudah
+   menutup **hidung dan mulut**.
+3. **AQI 24 jam ke depan.** Grafik batang per jam; ketuk batang untuk melihat angka dan peluang hujannya.
+4. **Polutan** (PM2.5, PM10, O₃, NO₂, CO, dibandingkan dengan batas WHO), **cuaca ringkas** (angin dan
+   arahnya, jarak pandang, kelembapan, peluang hujan), dan **7 hari ke depan** dengan AQI tertinggi per hari.
+
+Tampilan mengikuti mode gelap/terang HP. Tidak ada animasi latar, dan model AI kamera (± 12 MB) baru
+diunduh saat tombol cek masker ditekan.
 
 ## Cara kerja AI-nya
 
@@ -26,7 +30,6 @@ Ada tiga hal yang dilakukan AeroSense:
 |---|---|---|
 | Deteksi wajah | **MediaPipe BlazeFace** (neural network, Google) | Browser/HP, offline |
 | Deteksi masker | Warna kulit di sekitar mata dipelajari, lalu dibandingkan dengan area hidung & mulut (ruang warna YCbCr) | Browser/HP |
-| Saran teks | **Gemini** (Google) atau **Claude** (Anthropic), dengan cadangan mesin aturan lokal | Server Next.js |
 | Pendapat kedua foto masker | **Gemini** atau **Claude** (vision) | Server, hanya kalau pengguna menekan tombolnya |
 
 Foto dari kamera **tidak dikirim ke mana pun**, kecuali pengguna sendiri menekan "Minta pendapat kedua".
@@ -89,9 +92,10 @@ AeroSense bisa dipasang seperti aplikasi: buka di Chrome HP, lalu pilih menu ⋮
 Kartu kualitas udara akan menampilkan "Terukur di <nama stasiun> · <jarak> km · BMKG". Kalau token belum
 diisi atau tidak ada stasiun aktif di dekat lokasi, kartu menulis bahwa angkanya perkiraan model.
 
-### Mengaktifkan AI untuk saran teks (opsional)
+### Mengaktifkan pendapat kedua AI untuk foto masker (opsional)
 
-Pilih salah satu penyedia. Tanpa keduanya, semua fitur tetap berjalan dan saran teks memakai mesin aturan lokal.
+Pilih salah satu penyedia. Tanpa keduanya, semua fitur tetap berjalan; hanya tombol "Minta pendapat kedua"
+di hasil cek masker yang disembunyikan.
 
 - **Gemini** (ada paket gratis): ambil key di https://aistudio.google.com/apikey, isi `GEMINI_API_KEY`.
   Model bawaan `gemini-3.8-flash`, otomatis pindah ke `gemini-3.5-flash-lite` saat Google sedang sibuk; ganti lewat `GEMINI_MODEL` bila perlu.
@@ -111,15 +115,13 @@ sebuah banner menandai bahwa angkanya bukan data asli.
 
 ```
 src/app/page.tsx              halaman utama
-src/app/api/advisor           saran teks dari Gemini/Claude
-src/app/api/mask-check        pendapat kedua AI untuk foto masker
+src/app/api/mask-check        pendapat kedua AI untuk foto masker (GET: penyedia yang aktif)
 src/lib/ai.ts                pilih penyedia AI (gemini.ts / claude.ts)
 src/app/api/station           AQI terukur dari stasiun darat terdekat (WAQI)
 src/lib/station.ts            cari stasiun aktif terdekat (server, memakai WAQI_TOKEN)
 src/components/AeroSenseApp.tsx   UI utama
 src/components/MaskScanner    kamera + overlay AI
-src/components/Atmosphere     latar animasi (asap, hujan, petir, bintang)
-src/lib/weather.ts            ambil data + penilaian risiko
+src/lib/weather.ts            ambil data, hitung AQI, panduan per kategori
 src/lib/mask-detector.ts      deteksi wajah & masker
 src/app/icon.svg              logo (npm run icons membuat versi PNG)
 ```

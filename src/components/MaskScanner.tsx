@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CheckCircle2, Loader2, RotateCcw, ShieldAlert, Sparkles, TriangleAlert, X } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, RotateCcw, ShieldAlert, TriangleAlert, X } from "lucide-react";
 import { analyze, captureJpeg, loadDetector, type Reading, type Verdict } from "@/lib/mask-detector";
 
 export type ScanOutcome = "mask" | "nose_open" | "no_mask";
@@ -11,8 +11,6 @@ type Props = {
   onClose: () => void;
   onResult: (r: ScanOutcome) => void;
   aqi: number | null;
-  /** Nama penyedia AI ('Gemini' / 'Claude'); null berarti opsi pendapat kedua disembunyikan. */
-  aiName: string | null;
 };
 
 type Phase = "loading" | "scanning" | "result" | "error";
@@ -54,7 +52,6 @@ function ScanSession({
   onRetry,
   onResult,
   aqi,
-  aiName,
 }: Omit<Props, "open"> & { onRetry: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -72,11 +69,20 @@ function ScanSession({
   const [outcome, setOutcome] = useState<ScanOutcome | null>(null);
   const [ratio, setRatio] = useState(3 / 4);
   const [snapshot, setSnapshot] = useState<string | null>(null);
+  // Nama penyedia AI ('Gemini' / 'Claude'); null berarti opsi pendapat kedua disembunyikan.
+  const [aiName, setAiName] = useState<string | null>(null);
   const [claude, setClaude] = useState<{ loading: boolean; status?: string; jenis?: string; catatan?: string; error?: string } | null>(null);
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/mask-check")
+      .then((r) => r.json())
+      .then((j) => setAiName(j.provider ?? null))
+      .catch(() => {});
   }, []);
 
   // Nyalakan kamera + model sekali per sesi.
@@ -176,11 +182,11 @@ function ScanSession({
   const tone = live === "mask" ? "text-ok" : live === "no_mask" ? "text-danger" : live === "nose_open" ? "text-warn" : "text-paper";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-ink/95" role="dialog" aria-modal aria-label="Pemeriksa masker">
+    <div className="fixed inset-0 z-50 flex flex-col bg-ink" role="dialog" aria-modal aria-label="Pemeriksa masker">
       <header className="flex items-center justify-between px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
         <div>
-          <p className="label">Gerbang masker · AI di perangkat</p>
-          <h2 className="text-xl font-bold">Cek masker sebelum keluar</h2>
+          <p className="label">AI di perangkat</p>
+          <h2 className="text-xl font-bold">Cek pemakaian masker</h2>
         </div>
         <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full border border-line-strong hover:bg-ink-3" aria-label="Tutup">
           <X className="h-5 w-5" />
@@ -262,7 +268,7 @@ function Result({
     mask: {
       icon: <CheckCircle2 className="h-8 w-8" />,
       color: "text-ok border-ok/40 bg-ok/10",
-      title: "Siap berangkat.",
+      title: "Masker terpasang benar.",
       body: "Masker menutup hidung dan mulut. Pastikan kawat hidungnya ditekan rapat supaya asap tidak bocor dari samping.",
     },
     nose_open: {
@@ -306,7 +312,7 @@ function Result({
         <div className="rounded-2xl border border-line bg-ink-2 p-4">
           {!claude ? (
             <button onClick={onAskClaude} className="flex w-full items-center justify-center gap-2 rounded-xl border border-line-strong py-3 font-semibold hover:bg-ink-3">
-              <Sparkles className="h-4 w-4 text-gold" /> Minta pendapat kedua dari {aiName}
+              Minta pendapat kedua dari {aiName}
             </button>
           ) : claude.loading ? (
             <p className="flex items-center gap-2 text-muted">

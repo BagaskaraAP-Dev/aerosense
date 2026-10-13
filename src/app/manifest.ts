@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "AeroSense — Baca udara sebelum melangkah",
+    name: "AeroSense — Pantau udara Palembang",
     short_name: "AeroSense",
-    description: "Cuaca & kualitas udara realtime dengan pemeriksa masker berbasis AI kamera.",
+    description: "Kualitas udara Palembang realtime: AQI, PM2.5, prakiraan 24 jam dan 7 hari.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
