@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, LocateFixed, MapPin, Search, X } from "lucide-react";
-import { PALEMBANG, PALEMBANG_AREAS, searchPlaces, type Place } from "@/lib/weather";
+import { BINA_DARMA, PALEMBANG, PALEMBANG_AREAS, searchPlaces, type Place } from "@/lib/weather";
 
 const RECENT_KEY = "aerosense:recent";
 const RECENT_MAX = 5;
 
 const samePlace = (a: Place, b: Place) => a.lat === b.lat && a.lon === b.lon;
+
+/** Tempat tetap yang tidak dikenal layanan geocoding kota (mis. kampus), jadi dicocokkan langsung di sini. */
+const LOCAL: Place[] = [BINA_DARMA, ...PALEMBANG_AREAS];
 
 /** Kota yang pernah dipilih dari pencarian, terbaru di depan. */
 function readRecent(): Place[] {
@@ -42,11 +45,12 @@ export default function LocationPicker({ open, onClose, onPick, onUseGps, locati
 
   const query = q.trim();
   const searching = query.length >= 2;
-  const notFound = searching && !busy && found.q === query && found.places.length === 0;
-  // Palembang selalu paling atas, lalu kota yang terakhir dipilih, lalu wilayah Palembang lainnya.
+  const local = searching ? LOCAL.filter((p) => `${p.name} ${p.region}`.toLowerCase().includes(query.toLowerCase())) : [];
+  const notFound = searching && !busy && found.q === query && found.places.length === 0 && local.length === 0;
+  // Palembang selalu paling atas, lalu kampus Bina Darma, lalu kota yang terakhir dipilih, lalu wilayah Palembang lainnya.
   const shown = searching
-    ? found.places
-    : [PALEMBANG, ...recent.filter((r) => !samePlace(r, PALEMBANG)), ...PALEMBANG_AREAS].filter((p, i, all) => all.findIndex((q) => samePlace(q, p)) === i);
+    ? [...local, ...found.places.filter((p) => !local.some((l) => l.name === p.name || samePlace(l, p)))]
+    : [PALEMBANG, BINA_DARMA, ...recent.filter((r) => !samePlace(r, PALEMBANG)), ...PALEMBANG_AREAS].filter((p, i, all) => all.findIndex((q) => samePlace(q, p)) === i);
 
   const pick = (p: Place) => {
     const next = [p, ...recent.filter((r) => !samePlace(r, p))].slice(0, RECENT_MAX);

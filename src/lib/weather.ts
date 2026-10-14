@@ -17,6 +17,15 @@ export const PALEMBANG: Place = {
   source: "default",
 };
 
+/** Kampus Universitas Bina Darma, Jl. Ahmad Yani (koordinat dari OpenStreetMap); muncul tepat di bawah Palembang. */
+export const BINA_DARMA: Place = {
+  name: "Bina Darma",
+  region: "Universitas Bina Darma · Seberang Ulu I, Palembang",
+  lat: -2.99956,
+  lon: 104.77058,
+  source: "search",
+};
+
 /** Wilayah Kota Palembang yang koordinatnya sudah dicek ke layanan geocoding; muncul di pilihan lokasi. */
 export const PALEMBANG_AREAS: Place[] = [
   { name: "Kertapati", region: "Kota Palembang", lat: -3.02165, lon: 104.75033, source: "search" },
